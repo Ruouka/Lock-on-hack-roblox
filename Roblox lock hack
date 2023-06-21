@@ -1,0 +1,86 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local Camera = game.Workspace.CurrentCamera
+
+local isLocked = false
+local targetPlayer = nil
+
+local function lockOn()
+    if isLocked and targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+        Camera.CameraSubject = targetPlayer.Character.Head
+    else
+        Camera.CameraSubject = nil
+    end
+end
+
+local inputConnection
+local altKeyConnection
+
+local function onInputBegan(input, isProcessed)
+    if isProcessed then
+        return
+    end
+    
+    if input.KeyCode == Enum.KeyCode.LeftShift then
+        if isLocked then
+            isLocked = false
+        else
+            local player = Players.LocalPlayer
+            local mouse = player:GetMouse()
+            local target = mouse.Target
+            if target and target.Parent and target.Parent:IsA("Model") and target.Parent:FindFirstChild("Humanoid") then
+                local humanoid = target.Parent:FindFirstChild("Humanoid")
+                if humanoid.Health > 0 and target.Parent ~= player.Character then
+                    targetPlayer = Players:GetPlayerFromCharacter(target.Parent)
+                    isLocked = true
+                end
+            end
+        end
+    end
+    
+    -- Toggle HUD visibility with Left Alt
+    if input.KeyCode == Enum.KeyCode.LeftAlt then
+        ScreenGui.Enabled = not ScreenGui.Enabled
+    end
+end
+
+local function onInputEnded(input)
+    if input.KeyCode == Enum.KeyCode.LeftShift then
+        isLocked = false
+    end
+end
+
+-- HUD display
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "LockOnHUD"
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Enabled = true
+
+local Frame = Instance.new("Frame")
+Frame.Name = "HUDFrame"
+Frame.Size = UDim2.new(0, 200, 0, 50)
+Frame.Position = UDim2.new(0, 10, 0, 10)
+Frame.BackgroundColor3 = Color3.new(0, 0, 0)
+Frame.BackgroundTransparency = 0.5
+Frame.Parent = ScreenGui
+
+local Label = Instance.new("TextLabel")
+Label.Name = "HUDLabel"
+Label.Size = UDim2.new(1, -10, 1, -10)
+Label.Position = UDim2.new(0, 5, 0, 5)
+Label.BackgroundTransparency = 1
+Label.TextColor3 = Color3.new(1, 1, 1)
+Label.TextScaled = true
+Label.Font = Enum.Font.SourceSansBold
+Label.Text = "LockOn: OFF"
+Label.Parent = Frame
+
+-- Update HUD
+while true do
+    Label.Text = "LockOn: " .. (isLocked and "ON" or "OFF")
+    wait(0.1)
+end
+
+-- Connect input events after creating the HUD elements
+inputConnection = UserInputService.InputBegan:Connect(onInputBegan)
+altKeyConnection = UserInputService.InputEnded:Connect(onInputEnded)
